@@ -50,7 +50,7 @@ cpp-counterbenchmark/
     ├── mutex_counter.h           # Declares a counter protected by a mutex
     ├── spinlock_counter.h        # Declares a counter protected by a spin lock
     ├── statistics.h              # Declares summary statistics functions for benchmark measurements
-    ├── unsafe_counter.h          # Declares a counter without mutual exclusion
+    └── unsafe_counter.h          # Declares a counter without mutual exclusion
 └── LICENSE
 └── Makefile
 └── main.cpp                      # Configures and runs the benchmark
@@ -61,7 +61,7 @@ cpp-counterbenchmark/
     ├── mutex_counter.cpp         # Implements the mutex-protected counter
     ├── spinlock_counter.cpp      # Implements the spin-lock-protected counter
     ├── statistics.cpp            # Implements summary statistics for benchmark measurements
-    ├── unsafe_counter.cpp        # Implements the counter without mutual exclusion
+    └── unsafe_counter.cpp        # Implements the counter without mutual exclusion
 ```
 
 ## 🚀 Getting Started
