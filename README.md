@@ -16,7 +16,7 @@ This project is part of the **Concurrent Programming** module at the [Federal Un
 | :-------- | :----- | :---------- | :------- |
 | Unsynchronized | [`UnsafeCounter`](include/unsafe_counter.h) | A separate relaxed atomic `load` and `store`, each safe on its own but not atomic together | No: it loses updates |
 | Mutex | [`MutexCounter`](include/mutex_counter.h) | [`std::mutex`](https://en.cppreference.com/w/cpp/thread/mutex) guarded by a [`std::lock_guard`](https://en.cppreference.com/cpp/thread/lock_guard) | Yes |
-| Atomic | [`AtomicCounter`](include/atomic_counter.h) | [`std::atomic<int64_t>::fetch_add`](https://en.cppreference.com/w/cpp/atomic/atomic/fetch_add), a hardware atomic read-modify-writ | Yes |
+| Atomic | [`AtomicCounter`](include/atomic_counter.h) | [`std::atomic<int64_t>::fetch_add`](https://en.cppreference.com/w/cpp/atomic/atomic/fetch_add), a hardware atomic read-modify-write | Yes |
 | Spin lock | [`SpinLockCounter`](include/spinlock_counter.h) | A [`std::atomic_flag`](https://en.cppreference.com/w/cpp/atomic/atomic_flag) with `test_and_set` (acquire) and `clear` (release) | Yes |
 
 None of these classes share a common base class. The benchmark passes each class as a template argument, so the compiler resolves every call at compile time.
