@@ -8,9 +8,17 @@
 #include "benchmark.h"
 
 #include <barrier>
+using std::barrier;
+
 #include <chrono>
+using std::chrono::steady_clock;
+using std::chrono::duration;
+
 #include <thread>
+using std::thread;
+
 #include <vector>
+using std::vector;
 
 #include "atomic_counter.h"
 #include "mutex_counter.h"
@@ -20,9 +28,9 @@
 template <typename Counter>
 Trial run_trial(int num_threads, counter_t increments_per_thread) {
     Counter counter;
-    std::barrier start_line(num_threads + 1);
+    barrier start_line(num_threads + 1);
 
-    std::vector<std::thread> workers;
+    vector<thread> workers;
     for (int t = 0; t < num_threads; ++t) {
         workers.emplace_back([&] {
             start_line.arrive_and_wait();
@@ -33,13 +41,13 @@ Trial run_trial(int num_threads, counter_t increments_per_thread) {
     }
 
     start_line.arrive_and_wait();
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = steady_clock::now();
     for (auto& worker : workers) {
         worker.join();
     }
-    const auto end = std::chrono::steady_clock::now();
+    const auto end = steady_clock::now();
 
-    return Trial{std::chrono::duration<double>(end - start).count(),
+    return Trial{duration<double>(end - start).count(),
                  counter.get() == num_threads * increments_per_thread};
 }
 

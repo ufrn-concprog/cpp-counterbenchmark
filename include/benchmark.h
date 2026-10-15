@@ -1,6 +1,8 @@
 /**
- * @file benchmark.h
- * @brief Provides a synchronized multithreaded counter trial runner.
+ * @file    benchmark.h
+ * @brief   Provides a synchronized multithreaded counter trial runner.
+ * @author	Everton Cavalcante (everton.cavalcante@ufrn.br)
+ * @date	October 14, 2026
  */
 
 #ifndef BENCHMARK_H
@@ -9,12 +11,14 @@
 #include "counter.h"
 
 /**
- * Result of one benchmark trial.
+ * @struct  Trial
+ * @brief   Result of one benchmark trial.
  */
 struct Trial {
-    /// Elapsed wall-clock time in seconds.
+    /** @brief Elapsed wall-clock time in seconds. */
     double seconds;
-    /// Whether the final counter value matched the expected increment count.
+    
+    /** @brief Whether the final counter value matched the expected increment count. */
     bool correct;
 };
 

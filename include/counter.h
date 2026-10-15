@@ -9,8 +9,9 @@
 #define COUNTER_H
 
 #include <cstdint>
+using std::int64_t;
 
-/// Signed integer type used to store and report counter values.
-using counter_t = std::int64_t;
+/** @brief Signed integer type used to store and report counter values. */
+using counter_t = int64_t;
 
 #endif

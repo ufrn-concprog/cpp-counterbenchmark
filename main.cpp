@@ -1,14 +1,21 @@
 /**
  * @file    main.cpp
- * @brief   Configures and runs the counter synchronization benchmark.
+ * @brief   Configures and runs the benchmark.
  * @author	Everton Cavalcante (everton.cavalcante@ufrn.br)
  * @date	October 14, 2026
  */
 
 #include <array>
+using std::array;
+
 #include <cstdio>
+using std::printf;
+
 #include <string>
+using std::string;
+
 #include <vector>
+using std::vector;
 
 #include "atomic_counter.h"
 #include "benchmark.h"
@@ -19,11 +26,13 @@
 
 namespace {
 
-/// Total requested increments per trial, divided among its worker threads.
-constexpr counter_t TOTAL_INCREMENTS = 5'000'000;
-/// Number of trials used to calculate each thread-count summary.
+/** @brief Total requested increments per trial, divided among its worker threads. */
+constexpr counter_t TOTAL_INCREMENTS = 5000000;
+
+/** @brief Number of trials used to calculate each thread-count summary. */
 constexpr int MEASURED_RUNS = 20;
-/// Worker-thread counts used for each counter implementation.
+
+/** @brief Worker-thread counts used for each counter implementation. */
 constexpr std::array<int, 5> THREAD_COUNTS{1, 2, 4, 8, 16};
 
 /**
@@ -37,12 +46,11 @@ constexpr std::array<int, 5> THREAD_COUNTS{1, 2, 4, 8, 16};
  * @param label Display name for the counter implementation.
  */
 template <typename Counter>
-void run_benchmark(const std::string& label) {
-    std::printf("=== %s ===\n", label.c_str());
+void run_benchmark(const string& label) {
+    printf("=== %s ===\n", label.c_str());
     for (int threads : THREAD_COUNTS) {
         const counter_t per_thread = TOTAL_INCREMENTS / threads;
-
-        std::vector<double> times;
+        vector<double> times;
         int correct_runs = 0;
         for (int i = 0; i < MEASURED_RUNS; ++i) {
             const Trial trial = run_trial<Counter>(threads, per_thread);
@@ -53,21 +61,18 @@ void run_benchmark(const std::string& label) {
         }
 
         const double average = mean(times);
-        std::printf(
+        printf(
             "%2d threads | Mean: %.4f s | Standard Deviation: %.4f s | Correct: %d/%d\n",
             threads, average, std_dev(times, average),
             correct_runs, MEASURED_RUNS);
     }
-    std::printf("\n");
+    printf("\n");
+}
 }
 
-}  // namespace
-
 /**
- * Runs the benchmark suite for all supported counter implementations.
- *
- * @return Exit status of the application; zero indicates successful
- *         completion.
+ * @brief   Runs the benchmark suite for all supported counter implementations.
+ * @return  Exit status of the application; zero indicates successful completion.
  */
 int main() {
     run_benchmark<UnsafeCounter>("Unsynchronized");

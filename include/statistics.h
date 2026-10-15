@@ -1,29 +1,31 @@
 /**
- * @file statistics.h
- * @brief Declares summary-statistics functions for benchmark measurements.
+ * @file    statistics.h
+ * @brief   Declares summary statistics functions for benchmark measurements.
+ * @author	Everton Cavalcante (everton.cavalcante@ufrn.br)
+ * @date	October 14, 2026
  */
 
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
 #include <vector>
+using std::vector;
+
 
 /**
- * Computes the arithmetic mean of a collection of values.
- *
+ * @brief Computes the arithmetic mean of a collection of values.
  * @param values Measurement values; must not be empty.
  * @return The sum of the values divided by their count.
  */
-double mean(const std::vector<double>& values);
+double mean(const vector<double>& values);
 
 /**
- * Computes the sample standard deviation of a collection of values.
- *
+ * @brief Computes the sample standard deviation of a collection of values.
  * @param values Measurement values; must contain at least two elements.
  * @param average Arithmetic mean of @p values.
  * @return The square root of the sum of squared deviations divided by
  *         `values.size() - 1`.
  */
-double std_dev(const std::vector<double>& values, double average);
+double std_dev(const vector<double>& values, double average);
 
 #endif
