@@ -12,7 +12,6 @@ OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
 DEPS := $(OBJECTS:.o=.d)
 
 CPPFLAGS += -I$(INCLUDE_DIR)
-THREAD_FLAGS ?= -pthread
 
 .PHONY: all clean doc docs
 
@@ -20,11 +19,11 @@ THREAD_FLAGS ?= -pthread
 all: $(PROGRAM)
 
 $(PROGRAM): $(OBJECTS) | $(BIN_DIR)
-	$(CXX) $(LDFLAGS) $(THREAD_FLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 $(BUILD_DIR)/%.o: %.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(THREAD_FLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
 
 $(BIN_DIR):
 	mkdir -p $@

@@ -1,48 +1,76 @@
+/**
+ * @file main.cpp
+ * @brief Configures and runs the counter synchronization benchmark.
+ */
+
 #include <array>
-using std::array;
-
 #include <cstdio>
-using std::printf;
-
 #include <string>
-using std::string;
-
 #include <vector>
-using std::vector;
 
-#include "benchmark.h"
-#include "counters.h"
-#include "stats.h"
+#include "counterbenchmark/benchmark.h"
+#include "counterbenchmark/counters.h"
+#include "counterbenchmark/statistics.h"
 
-constexpr counter_t TOTAL_INCREMENTS = 5'000'000;  // divided among the threads
+namespace {
+
+using counterbenchmark::AtomicCounter;
+using counterbenchmark::counter_t;
+using counterbenchmark::MutexCounter;
+using counterbenchmark::SpinLockCounter;
+using counterbenchmark::UnsafeCounter;
+
+/// Total requested increments per trial, divided among its worker threads.
+constexpr counter_t TOTAL_INCREMENTS = 5'000'000;
+/// Number of trials used to calculate each thread-count summary.
 constexpr int MEASURED_RUNS = 20;
-constexpr array<int, 5> THREAD_COUNTS{1, 2, 4, 8, 16};
+/// Worker-thread counts used for each counter implementation.
+constexpr std::array<int, 5> THREAD_COUNTS{1, 2, 4, 8, 16};
 
-/** Measures one mechanism at every thread count and prints mean, standard
- * deviation and correctness. */
+/**
+ * Measures one counter implementation at each configured thread count.
+ *
+ * For every thread count, this function runs the configured number of trials
+ * and prints the mean elapsed time, sample standard deviation, and number of
+ * correct results.
+ *
+ * @tparam Counter Counter type accepted by counterbenchmark::run_trial.
+ * @param label Display name for the counter implementation.
+ */
 template <typename Counter>
-void run_benchmark(const string& label) {
-    printf("=== %s ===\n", label.c_str());
+void run_benchmark(const std::string& label) {
+    std::printf("=== %s ===\n", label.c_str());
     for (int threads : THREAD_COUNTS) {
-        counter_t per_thread = TOTAL_INCREMENTS / threads;
+        const counter_t per_thread = TOTAL_INCREMENTS / threads;
 
-        vector<double> times;
+        std::vector<double> times;
         int correct_runs = 0;
         for (int i = 0; i < MEASURED_RUNS; ++i) {
-            Trial trial = run_trial<Counter>(threads, per_thread);
+            const counterbenchmark::Trial trial =
+                counterbenchmark::run_trial<Counter>(threads, per_thread);
             times.push_back(trial.seconds);
             if (trial.correct) {
                 ++correct_runs;
             }
         }
 
-        double m = mean(times);
-        printf("%2d threads | Mean: %.4f s | Standard Deviation: %.4f s | Correct: %d/%d\n",
-            threads, m, std_dev(times, m), correct_runs, MEASURED_RUNS);
+        const double average = counterbenchmark::mean(times);
+        std::printf(
+            "%2d threads | Mean: %.4f s | Standard Deviation: %.4f s | Correct: %d/%d\n",
+            threads, average, counterbenchmark::std_dev(times, average),
+            correct_runs, MEASURED_RUNS);
     }
-    printf("\n");
+    std::printf("\n");
 }
 
+}  // namespace
+
+/**
+ * Runs the benchmark suite for all supported counter implementations.
+ *
+ * @return Exit status of the application; zero indicates successful
+ *         completion.
+ */
 int main() {
     run_benchmark<UnsafeCounter>("Unsynchronized");
     run_benchmark<MutexCounter>("Mutex");
