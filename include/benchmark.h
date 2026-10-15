@@ -3,17 +3,10 @@
  * @brief Provides a synchronized multithreaded counter trial runner.
  */
 
-#ifndef COUNTERBENCHMARK_BENCHMARK_H
-#define COUNTERBENCHMARK_BENCHMARK_H
+#ifndef BENCHMARK_H
+#define BENCHMARK_H
 
-#include <barrier>
-#include <chrono>
-#include <thread>
-#include <vector>
-
-#include "counterbenchmark/counter.h"
-
-namespace counterbenchmark {
+#include "counter.h"
 
 /**
  * Result of one benchmark trial.
@@ -33,6 +26,10 @@ struct Trial {
  * the interval from the caller's barrier release through completion of all
  * worker joins.
  *
+ * Explicitly instantiated in benchmark.cpp for UnsafeCounter, MutexCounter,
+ * AtomicCounter, and SpinLockCounter. Supporting another counter type requires
+ * adding an instantiation there.
+ *
  * @tparam Counter Counter type providing `increment()` and `get()` operations.
  * @param num_threads Number of worker threads; must be greater than zero.
  * @param increments_per_thread Number of increments each worker performs;
@@ -41,31 +38,6 @@ struct Trial {
  *         `num_threads * increments_per_thread`.
  */
 template <typename Counter>
-Trial run_trial(int num_threads, counter_t increments_per_thread) {
-    Counter counter;
-    std::barrier start_line(num_threads + 1);
-
-    std::vector<std::thread> workers;
-    for (int t = 0; t < num_threads; ++t) {
-        workers.emplace_back([&] {
-            start_line.arrive_and_wait();
-            for (counter_t i = 0; i < increments_per_thread; ++i) {
-                counter.increment();
-            }
-        });
-    }
-
-    start_line.arrive_and_wait();
-    const auto start = std::chrono::steady_clock::now();
-    for (auto& worker : workers) {
-        worker.join();
-    }
-    const auto end = std::chrono::steady_clock::now();
-
-    return Trial{std::chrono::duration<double>(end - start).count(),
-                 counter.get() == num_threads * increments_per_thread};
-}
-
-}  // namespace counterbenchmark
+Trial run_trial(int num_threads, counter_t increments_per_thread);
 
 #endif

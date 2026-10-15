@@ -3,12 +3,10 @@
  * @brief Declares summary-statistics functions for benchmark measurements.
  */
 
-#ifndef COUNTERBENCHMARK_STATISTICS_H
-#define COUNTERBENCHMARK_STATISTICS_H
+#ifndef STATISTICS_H
+#define STATISTICS_H
 
 #include <vector>
-
-namespace counterbenchmark {
 
 /**
  * Computes the arithmetic mean of a collection of values.
@@ -27,7 +25,5 @@ double mean(const std::vector<double>& values);
  *         `values.size() - 1`.
  */
 double std_dev(const std::vector<double>& values, double average);
-
-}  // namespace counterbenchmark
 
 #endif

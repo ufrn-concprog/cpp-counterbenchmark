@@ -1,0 +1,16 @@
+/**
+ * @file    atomic_counter.cpp
+ * @brief   Implements the atomic read-modify-write counter.
+ * @author	Everton Cavalcante (everton.cavalcante@ufrn.br)
+ * @date	October 14, 2026
+ */
+
+#include "atomic_counter.h"
+
+void AtomicCounter::increment() {
+    value.fetch_add(1);
+}
+
+counter_t AtomicCounter::get() const {
+    return value.load();
+}

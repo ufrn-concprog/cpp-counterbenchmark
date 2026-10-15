@@ -3,11 +3,9 @@
  * @brief Implements summary statistics for benchmark measurements.
  */
 
-#include "counterbenchmark/statistics.h"
+#include "statistics.h"
 
 #include <cmath>
-
-namespace counterbenchmark {
 
 double mean(const std::vector<double>& values) {
     double sum = 0;
@@ -25,5 +23,3 @@ double std_dev(const std::vector<double>& values, double average) {
     }
     return std::sqrt(sum_squared_diffs / (values.size() - 1));
 }
-
-}  // namespace counterbenchmark

@@ -1,6 +1,8 @@
 /**
- * @file main.cpp
- * @brief Configures and runs the counter synchronization benchmark.
+ * @file    main.cpp
+ * @brief   Configures and runs the counter synchronization benchmark.
+ * @author	Everton Cavalcante (everton.cavalcante@ufrn.br)
+ * @date	October 14, 2026
  */
 
 #include <array>
@@ -8,17 +10,14 @@
 #include <string>
 #include <vector>
 
-#include "counterbenchmark/benchmark.h"
-#include "counterbenchmark/counters.h"
-#include "counterbenchmark/statistics.h"
+#include "atomic_counter.h"
+#include "benchmark.h"
+#include "mutex_counter.h"
+#include "spinlock_counter.h"
+#include "statistics.h"
+#include "unsafe_counter.h"
 
 namespace {
-
-using counterbenchmark::AtomicCounter;
-using counterbenchmark::counter_t;
-using counterbenchmark::MutexCounter;
-using counterbenchmark::SpinLockCounter;
-using counterbenchmark::UnsafeCounter;
 
 /// Total requested increments per trial, divided among its worker threads.
 constexpr counter_t TOTAL_INCREMENTS = 5'000'000;
@@ -34,7 +33,7 @@ constexpr std::array<int, 5> THREAD_COUNTS{1, 2, 4, 8, 16};
  * and prints the mean elapsed time, sample standard deviation, and number of
  * correct results.
  *
- * @tparam Counter Counter type accepted by counterbenchmark::run_trial.
+ * @tparam Counter Counter type accepted by run_trial.
  * @param label Display name for the counter implementation.
  */
 template <typename Counter>
@@ -46,18 +45,17 @@ void run_benchmark(const std::string& label) {
         std::vector<double> times;
         int correct_runs = 0;
         for (int i = 0; i < MEASURED_RUNS; ++i) {
-            const counterbenchmark::Trial trial =
-                counterbenchmark::run_trial<Counter>(threads, per_thread);
+            const Trial trial = run_trial<Counter>(threads, per_thread);
             times.push_back(trial.seconds);
             if (trial.correct) {
                 ++correct_runs;
             }
         }
 
-        const double average = counterbenchmark::mean(times);
+        const double average = mean(times);
         std::printf(
             "%2d threads | Mean: %.4f s | Standard Deviation: %.4f s | Correct: %d/%d\n",
-            threads, average, counterbenchmark::std_dev(times, average),
+            threads, average, std_dev(times, average),
             correct_runs, MEASURED_RUNS);
     }
     std::printf("\n");
