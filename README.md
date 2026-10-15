@@ -16,88 +16,98 @@ All the mechanisms are implemented
 
 | Mechanism | Class | How it works | Correct? |
 | :-------- | :----- | :---------- | :------- |
-| Unsynchronized | [`UnsafeCounter`](inclu/UnsafeCounter.java) | Increment to a vollatile variable | No: it loses updates |
-| Synchronized methods | [`SynchronizedCounter`](src/SynchronizedCounter.java) | Increment and get methods synchronized (mutual exclusion) | Yes |
-| Atomic | [`AtomicCounter`](src/AtomicCounter.java) | [`AtomicLong.incrementAndGet()`](https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/util/concurrent/atomic/AtomicLong.html), a hardware atomic read-modify-write | Yes |
-| Spin lock | [`SpinLockCounter`](src/SpinLockCounter.java) | A compare-and-swap loop on an `AtomicBoolean`, with `Thread.onSpinWait()` | Yes |
- 
-All four implement the [`Counter`](src/Counter.java) interface, so the benchmark treats them uniformly.
+| Unsynchronized | [`UnsafeCounter`](include/unsafe_counter.h) | A separate relaxed atomic `load` and `store`, each safe on its own but not atomic together | No: it loses updates |
+| Mutex | [`MutexCounter`](include/mutex_counter.h) | [`std::mutex`](https://en.cppreference.com/w/cpp/thread/mutex) guarded by a [`std::lock_guard`](https://en.cppreference.com/cpp/thread/lock_guard) | Yes |
+| Atomic | [`AtomicCounter`](include/atomic_counter.h) | [`std::atomic<int64_t>::fetch_add`](https://en.cppreference.com/w/cpp/atomic/atomic/fetch_add), a hardware atomic read-modify-writ | Yes |
+| Spin lock | [`SpinLockCounter`](include/spinlock_counter) | A [`std::atomic_flag`](https://en.cppreference.com/w/cpp/atomic/atomic_flag) with `test_and_set` (acquire) and `clear` (release) | Yes |
+
+None of these classes share a common base class. The benchmark passes each class as a template argument, so the compiler resolves every call at compile time.
  
 ### Methodology
  
 1. **Fixed total work.** Every configuration performs 5,000,000 increments in total, divided evenly among 1, 2, 4, 8, and 16 threads. The 1-thread case refers to each mechanism's *uncontended* cost, and the other rows show what contention adds.
-2. **Starting gate.** The worker threads and the main thread wait at a [`CyclicBarrier`](https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/util/concurrent/CyclicBarrier.html), so all workers begin incrementing together. Timing starts when the gate opens and ends when all workers have finished. Thread creation is not timed.
-4. **Warm-up.** For each configuration, 5 trials run and are discarded.
-5. **Measurement.** 20 measured trials per configuration, reporting the mean and standard deviation.
-6. **Correctness check.** After each trial, the final count is compared with the number of increments performed, and the number of correct trials is reported.
+2. **Starting gate.** The worker threads and the main thread wait at a [`std::barrier`](https://en.cppreference.com/w/cpp/thread/barrier), so all workers begin incrementing together. Timing starts when the gate opens and ends when all workers have finished. Thread creation is not timed.
+3. **Warm-up.** For each configuration, 5 trials run and are discarded.
+4. **Measurement.** 20 measured trials per configuration, reporting the mean and standard deviation.
+5. **Correctness check.** After each trial, the final count is compared with the number of increments performed, and the number of correct trials is reported.
 
 ### Design Notes
- 
-* **Why the unsynchronized counter is *volatile*.** `volatile` guarantees visibility but not atomicity: the increment is still a read, an addition, and a write, so threads can interleave between those steps and updates are lost. Without `volatile`, the JVM could keep the value in a register across the loop and hide the problem.
+
+* **Why the unsynchronized counter is not a plain `long`.** Concurrent unsynchronized access to a plain variable is a data race, which is undefined behavior in C++. At `-O2`, the compiler may also collapse the whole loop into a single addition, so the lost updates would not even appear. The relaxed `load` and `store` compile to ordinary memory accesses, so the cost is no synchronization, and the race remains observable.
 * **Why a starting gate.** Staggered thread start-up would hide contention.
-* **A spin lock is a lock.** If the thread holding it is descheduled, every other thread spins until the holder runs again. This is visible when threads outnumber cores.
-* **No speedup is expected.** All threads increment the same counter, so adding threads cannot make the work faster. The benchmark measures the *cost of sharing*, not parallel speedup.
+- **A spin lock is a lock.** If the thread holding it is descheduled, every other thread spins until the holder runs again. This is visible when threads outnumber cores. The *acquire* on `lock` and the *release* on `unlock` are what make one holder's writes visible to the next.
+- **[`std::atomic_flag`](https://en.cppreference.com/w/cpp/atomic/atomic_flag)** is the one atomic type guaranteed to be lock-free.
+- **No speedup is expected.** All threads increment the same counter, so adding threads cannot make the work faster. The benchmark measures the *cost of sharing*, not parallel speedup.
 
 ## 📂 Repository Structure
  
 ```
-counter-benchmark/
-└── doc/                        # Javadoc HTML documentation
+cpp-counterbenchmark/
+└── doc/                          # HTML documentation
+└── Doxyfile                      # Doxygen configuration file
+└── include/
+    ├── atomic_counter.h          # Declares a counter based on an atomic read-modify-write operation
+    ├── benchmark.h               # Defines the trial runner
+    ├── counter.h                 # Defines the integer type used by counter implementations
+    ├── mutex_counter.h           # Declares a counter protected by a mutex
+    ├── spinlock_counter.h        # Declares a counter protected by a spin lock
+    ├── statistics.h              # Declares summary statistics functions for benchmark measurements
+    ├── unsafe_counter.h          # Declares a counter without mutual exclusion
+└── LICENSE
+└── Makefile
+└── main.cpp                      # Configures and runs the benchmark
 └── README.md
 └── src/
-    ├── Counter.java              # Interface implemented by all four mechanisms
-    ├── UnsafeCounter.java        # Volatile counter, no mutual exclusion (loses updates)
-    ├── SynchronizedCounter.java  # Synchronized methods
-    ├── AtomicCounter.java        # AtomicLong
-    ├── SpinLockCounter.java      # Spin lock built on AtomicBoolean compare-and-swap
-    ├── CounterBenchmark.java     # One trial: threads, starting gate, timing, correctness
-    ├── Stats.java                # Mean and sample standard deviation
-    ├── Main.java                 # Benchmark's entry point
+    ├── atomic_counter.cpp        # Implements the atomic read-modify-write counter
+    ├── benchmark.cpp             # Implements the trial runner
+    ├── mutex_counter.cpp         # Implements the mutex-protected counter
+    ├── spinlock_counter.cpp      # Implements the spin-lock-protected counter
+    ├── statistics.cpp            # Implements summary statistics for benchmark measurements
+    ├── unsafe_counter.cpp        # Implements the counter without mutual exclusion
 ```
  
 ## 🚀 Getting Started
  
 ### Prerequisites
  
-* Java Development Kit (JDK) 17 or newer (the code uses a `record`; `Thread.onSpinWait()` requires Java 9)
+* A C++ compiler with C++20 support, such as GCC 11 or later, or a recent Clang
 * A terminal or IDE
 
-The program uses only the Java standard library, so there are no additional dependencies.
+The program uses only the C++ standard library, so there are no additional dependencies.
+
+### Compiling
+ 
+From the project root:
+ 
+```bash
+make
+```
  
 ### Running
  
-Run each mechanism at once:
- 
 ```bash
-for m in unsynchronized mutex atomic spinlock; do java -cp out Main $m; done
+./bin/counterbenchmark
 ```
+
+All four mechanisms run in sequence.
  
-Or run a single mechanism. For example.
- 
-```bash
-java -cp out Main atomic
-```
- 
-With no argument, all four mechanisms run in the same JVM. This is convenient for a quick check, but the benchmark results will be less reliable.
- 
-The workload is configured by constants at the top of [`Main`](src/Main.java): 
+The workload is configured by constants at the top of [`main.cpp`](main.cpp): 
 
 | Constant            | Description | Value set |
 | :-----------------  | :---------- | --------- |
 | `TOTAL_INCREMENTS`  | Total increments per trial, divided among the threads (all thread counts divide it evenly) | 5,000,000 |
 | `THREAD_COUNTS`     | Number of threads to use for each benchmark run | 1, 2, 4, 8, 16 |
 | `MEASURED_RUNS`     | Number of runs to measure for each configuration | 20 |
-| `WARMUP_RUNS`       | Discarded runs before measuring each configuration to let the JVM warm up | 5 |
  
 ### Output Example
  
 ```text
 === Atomic ===
- 1 threads | Mean: 0.0099 s | Standard deviation: 0.0003 s | Correct: 20/20
- 2 threads | Mean: 0.0184 s | Standard deviation: 0.0013 s | Correct: 20/20
- 4 threads | Mean: 0.0353 s | Standard deviation: 0.0028 s | Correct: 20/20
- 8 threads | Mean: 0.1852 s | Standard deviation: 0.0231 s | Correct: 20/20
-16 threads | Mean: 0.1683 s | Standard deviation: 0.0554 s | Correct: 20/20
+ 1 threads | Mean: 0.0087 s | Standard Deviation: 0.0001 s | Correct: 20/20
+ 2 threads | Mean: 0.0179 s | Standard Deviation: 0.0004 s | Correct: 20/20
+ 4 threads | Mean: 0.0336 s | Standard Deviation: 0.0002 s | Correct: 20/20
+ 8 threads | Mean: 0.1622 s | Standard Deviation: 0.0245 s | Correct: 20/20
+16 threads | Mean: 0.1679 s | Standard Deviation: 0.0062 s | Correct: 20/20
 ```
  
 The `Correct` column shows how many of the 20 measured trials ended with the right count.
@@ -105,15 +115,14 @@ The `Correct` column shows how many of the 20 measured trials ended with the rig
 These are hypotheses to check, not guaranteed results:
  
 * **Unsynchronized:** correct with 1 thread and wrong with 2 or more threads; it is the fastest strategy due to zero synchronization overhead.
-* **Synchronized method:** always correct; under contention, threads block and wake up.
-* **Atomic:** always correct; it delivers near-optimal performance at low thread counts using hardware-level compare-and-swap, but suffers moderate performance loss under high contention due to repeated retry loops.
-* **Spin lock:** it may be competitive with fewer threads, but causes severe performance degradation as thread count scales because threads consume CPU cycles while busy-waiting for the lock.
+* **Mutex:** always correct; under contention, threads block and wake up.
+* **Atomic:** always correct; it leverages lock-free hardware instructions for ultra-low execution times at low thread counts, but degrades as thread contention scales due to repeated compare-and-swap retry loops.
+* **Spin lock:** it provides fast acquisition under minimal thread competition, but causes performance degradation at high thread counts as threads consume CPU time busy-waiting for lock release.
 
 ## 🧪 Things to Explore
  
-1. Add [`LongAdder`](https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/util/concurrent/atomic/LongAdder.html) as a fifth mechanism.
-2. Replace the `synchronized` block with a [`ReentrantLock`](https://docs.oracle.com/en/java/javase/26/docs/api/java.base/java/util/concurrent/locks/ReentrantLock.html) object. Do the results change?
-3. Make the critical section longer (e.g., add some computation inside the lock). At what point does the spin lock stop being competitive?
+1. Replace [`std::lock_guard`](https://en.cppreference.com/cpp/thread/lock_guard) with manual `lock()` and `unlock()` calls. What changes if the critical section can throw an exception?
+2. Make the critical section longer (e.g., add some computation inside the lock). At what point does the spin lock stop being competitive?
  
 ## 🤝 Contributing
  
