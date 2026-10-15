@@ -25,9 +25,8 @@ None of these classes share a common base class. The benchmark passes each class
 
 1. **Fixed total work.** Every configuration performs 5,000,000 increments in total, divided evenly among 1, 2, 4, 8, and 16 threads. The 1-thread case refers to each mechanism's *uncontended* cost, and the other rows show what contention adds.
 2. **Starting gate.** The worker threads and the main thread wait at a [`std::barrier`](https://en.cppreference.com/w/cpp/thread/barrier), so all workers begin incrementing together. Timing starts when the gate opens and ends when all workers have finished. Thread creation is not timed.
-3. **Warm-up.** For each configuration, 5 trials run and are discarded.
-4. **Measurement.** 20 measured trials per configuration, reporting the mean and standard deviation.
-5. **Correctness check.** After each trial, the final count is compared with the number of increments performed, and the number of correct trials is reported.
+3. **Measurement.** 20 measured trials per configuration, reporting the mean and standard deviation.
+4. **Correctness check.** After each trial, the final count is compared with the number of increments performed, and the number of correct trials is reported.
 
 ### Design Notes
 
